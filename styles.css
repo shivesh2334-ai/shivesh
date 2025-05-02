@@ -1,0 +1,46 @@
+/* General styling for sections */
+section {
+    border: 2px solid #4caf50; /* Green border */
+    padding: 20px;
+    margin: 20px auto;
+    width: 90%; /* Adjust the width as needed */
+    max-width: 800px; /* Optional: Limit the maximum width */
+    background-color: #ffffff; /* White background inside the frame */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+    border-radius: 0; /* Ensure the frame remains square (no rounded corners) */
+    text-align: center; /* Center-align text inside */
+}
+
+/* Styling for section headings */
+section h2 {
+    color: #2e7d32; /* Dark green color for headings */
+    margin-bottom: 15px;
+}
+
+/* Add spacing for paragraph text */
+section p {
+    margin-bottom: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #333333; /* Dark gray text */
+}
+
+/* Buttons inside sections */
+section button {
+    background-color: #2e7d32; /* Dark green button */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+section button:hover {
+    background-color: #1b5e20; /* Darker green on hover */
+}
+
+/* Add a unique ID for each section if needed */
+#about, #services, #book-appointment, #feedback, #blog {
+    border: 2px solid #4caf50; /* Same border for all sections */
+}
