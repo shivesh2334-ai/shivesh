@@ -1,0 +1,128 @@
+// server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public')); // Serve static files from 'public' directory
+
+// Form submission route
+app.post('/api/submit-form', async (req, res) => {
+  try {
+    const formData = req.body;
+    
+    // Add timestamp
+    formData.timestamp = new Date().toISOString();
+    
+    // 1. Add data to Google Sheets
+    await addToGoogleSheet(formData);
+    
+    // 2. Send email notification
+    await sendEmailNotification(formData);
+    
+    res.status(200).json({ success: true, message: 'Form submitted successfully' });
+  } catch (error) {
+    console.error('Error processing form submission:', error);
+    res.status(500).json({ success: false, message: 'Form submission failed', error: error.message });
+  }
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+// Google Sheets API Function
+async function addToGoogleSheet(formData) {
+  try {
+    // Configure auth client
+    const auth = new google.auth.JWT(
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      null,
+      process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      ['https://www.googleapis.com/auth/spreadsheets']
+    );
+
+    // Create sheets client
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    // Prepare row data
+    const values = [
+      [
+        formData.timestamp,
+        formData.name,
+        formData.email,
+        formData.interest,
+        formData.message || '',
+        formData.newsletter
+      ]
+    ];
+    
+    // Append data to spreadsheet
+    const response = await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: 'Sheet1!A:F', // Adjust based on your sheet's structure
+      valueInputOption: 'USER_ENTERED',
+      resource: { values }
+    });
+    
+    console.log('Data added to Google Sheet:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding data to Google Sheet:', error);
+    throw error;
+  }
+}
+
+// Email Notification Function
+async function sendEmailNotification(formData) {
+  try {
+    // Create email transporter
+    const transporter = nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE, // e.g., 'gmail', 'outlook', etc.
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL,
+      subject: 'New AI4HEALTH CLUB Contact Form Submission',
+      html: `
+        <h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${formData.name}</p>
+        <p><strong>Email:</strong> ${formData.email}</p>
+        <p><strong>Area of Interest:</strong> ${formData.interest}</p>
+        <p><strong>Message:</strong> ${formData.message || 'No message provided'}</p>
+        <p><strong>Newsletter:</strong> ${formData.newsletter}</p>
+        <p><strong>Submitted:</strong> ${new Date(formData.timestamp).toLocaleString()}</p>
+      `
+    };
+    
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.response);
+    
+    // If newsletter subscription is enabled, you might want to add the user to your mailing list service here
+    if (formData.newsletter === 'Yes') {
+      // Add code to subscribe to mailing list service like Mailchimp, etc.
+      console.log('User added to newsletter:', formData.email);
+    }
+    
+    return info;
+  } catch (error) {
+    console.error('Error sending email notification:', error);
+    throw error;
+  }
+}
